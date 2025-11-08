@@ -1,8 +1,19 @@
 name: wxread
 
+concurrency:
+  group: ${{ github.workflow }} # 使用工作流名称作为并发组的key
+  cancel-in-progress: true    # 取消任何正在进行的相同并发组的工作流
+
 on:
   schedule:
-    - cron: '0 17 * * *'  # 每天北京时间凌晨1点执行（UTC时间17点）
+    # 凌晨任务：北京时间每天 01:00（UTC 前一天 17:00）
+    - cron: '0 17 * * *'
+    # 早间任务：北京时间每天 05:00（UTC 前一天 21:00）
+    #- cron: '0 21 * * *'
+    # 午间任务：北京时间每天 11:40（UTC 03:40）
+    #- cron: '40 3 * * *'
+    # 晚间任务：北京时间每天 22:00（UTC 14:00）
+    #- cron: '0 14 * * *'
   workflow_dispatch:  # 手动触发
 
 jobs:
@@ -38,7 +49,18 @@ jobs:
         WXPUSHER_SPT: ${{ secrets.WXPUSHER_SPT }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        SERVERCHAN_SPT:  ${{ secrets.SERVERCHAN_SPT }}
         READ_NUM: ${{ vars.READ_NUM }}  # 使用 Repository Variables
 
       run: |
         python main.py
+
+  keepalive-job:
+    name: Keepalive Workflow
+    if: ${{ always() }}
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: liskin/gh-workflow-keepalive@v1.2.1
